@@ -49,12 +49,12 @@ def main():
 
                 if phrase_time and now - phrase_time > timedelta(seconds=args.phrase_timeout):
                     transcription = text
-                    pyperclip.copy(transcription.strip())
-                    print(f"{transcription.strip()}")
                 else:
                     transcription += " " + text
 
                 phrase_time = now
+                pyperclip.copy(transcription.strip())
+                print(f"{transcription.strip()}")
             else:
                 sleep(0.1)
         except KeyboardInterrupt:
