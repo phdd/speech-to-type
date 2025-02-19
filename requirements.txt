@@ -6,3 +6,5 @@ torch
 numpy
 git+https://github.com/openai/whisper.git
 pyperclip
+notify2
+dbus-python
