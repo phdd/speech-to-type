@@ -1,91 +1,73 @@
-import argparse
+import re
+import sys
+import gi
+
+gi.require_version('Notify', '0.7')
+gi.require_version('Gtk', '4.0')
+
+from gi.repository import Notify, Gtk, GLib
+
 import numpy as np
 import speech_recognition as sr
 import whisper
 import torch
-import notify2
 import subprocess
 
-from datetime import datetime, timedelta
-from queue import Queue
-from time import sleep
-import pyperclip
+model_name = "medium"
+energy_threshold = 1000
+initial_prompt = """
+Beachte bei der Transkription folgende Eigennamen von Orten, Firmen und Personen:
 
-def send_notification(title, message, timeout=5000, action_callback=None, persistent=False):
-    notify2.init("Speech To Text")
-    n = notify2.Notification(title, message)
-    if persistent:
-        n.set_timeout(notify2.EXPIRES_NEVER)
-    else:
-        n.set_timeout(timeout)
-    if action_callback:
-        n.add_action("stop", "Stop", action_callback)
-    n.show()
-    return n
+- ConnCons
+- VIPFluid
+- Cancilico
+- Dima
+"""
 
 def type_text(text):
     subprocess.run(["xdotool", "type", text])
 
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--model", default="medium", choices=["tiny", "base", "small", "medium", "large"], help="Model to use")
-    parser.add_argument("--energy_threshold", default=1000, type=int, help="Energy level for mic to detect.")
-    parser.add_argument("--phrase_timeout", default=2.0, type=float, help="Timeout to end a phrase.")
-    args = parser.parse_args()
+class SpeechToText(Gtk.Application):
+    def __init__(self):
+        super().__init__(application_id="com.github.phdd.SpeechToText")
+        self.loop = None  # Main loop reference
 
-    initial_prompt = """
-    Beachte bei der Transkription folgende Eigennamen von Orten, Firmen und Personen:
+    def stop(self, notification, action, user_data=None):
+        self.loop.quit()
 
-    - ConnCons
-    - VIPFluid
-    - Cancilico
-    """
+    def do_activate(self):
+        Notify.init('Speech to Text')
+        self.loop = GLib.MainLoop() 
 
-    data_queue = Queue()
-    recorder = sr.Recognizer()
-    recorder.energy_threshold = args.energy_threshold
-    recorder.dynamic_energy_threshold = False
+        notification = Notify.Notification.new("Model laden", "Bitte warte einen Moment")
+        notification.set_urgency(Notify.Urgency.CRITICAL)
+        notification.show()
 
-    source = sr.Microphone(sample_rate=16000)
-    
-    loading_notification = send_notification("Lade das Modell", "Bitte warten...")
-    model = whisper.load_model(args.model)
-    loading_notification.close()
+        recorder = sr.Recognizer()
+        recorder.energy_threshold = energy_threshold
+        recorder.dynamic_energy_threshold = False
 
-    transcription = ""
-    stop_recording = False
+        source = sr.Microphone(sample_rate=16000)
+        model = whisper.load_model(model_name)
+        notification.close()
 
-    def stop_callback(n, action):
-        nonlocal stop_recording
-        stop_recording = True
-        n.close()
+        notification = Notify.Notification.new("Modell geladen", "Sprich!")
+        notification.set_urgency(Notify.Urgency.CRITICAL)
+        notification.set_timeout(Notify.EXPIRES_NEVER)
+        notification.add_action("stop", "Stop", self.stop)
+        notification.show()
 
-    ready_notification = send_notification("Modell geladen", "Sprich!", timeout=0, action_callback=stop_callback, persistent=True)
+        with source:
+            recorder.adjust_for_ambient_noise(source)
 
-    with source:
-        recorder.adjust_for_ambient_noise(source)
-
-    def record_callback(_, audio: sr.AudioData):
-        if not stop_recording:
-            data_queue.put(audio.get_raw_data())
-
-    recorder.listen_in_background(source, record_callback, phrase_time_limit=None)
-
-    while not stop_recording:
-        if not data_queue.empty():
-            audio_data = b''.join(data_queue.queue)
-            data_queue.queue.clear()
-
-            audio_np = np.frombuffer(audio_data, dtype=np.int16).astype(np.float32) / 32768.0
+        def record_callback(_, audio: sr.AudioData):
+            audio_np = np.frombuffer(audio.get_raw_data(), dtype=np.int16).astype(np.float32) / 32768.0
             result = model.transcribe(audio_np, fp16=torch.cuda.is_available(), initial_prompt=initial_prompt)
             text = result['text'].strip()
+            type_text(f"{text} ")
 
-            transcription += " " + text
-            print(text)
-        else:
-            sleep(0.5)
+        recorder.listen_in_background(source, record_callback, phrase_time_limit=None)
+        self.loop.run()
 
-    ready_notification.close()
-
-if __name__ == "__main__":
-    main()
+app = SpeechToText()
+app.run(sys.argv)
