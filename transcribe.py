@@ -72,8 +72,8 @@ class SpeechToText(Gtk.Application):
             audio_np = np.frombuffer(audio.get_raw_data(), dtype=np.int16).astype(np.float32) / 32768.0
             result = model.transcribe(audio_np, fp16=torch.cuda.is_available(), initial_prompt=initial_prompt)
             text = result['text'].strip()
-            # type_text(f"{text} ")
-            print(f"Transkription: {text}")
+            type_text(f"{text} ")
+            # print(f"Transkription: {text}")
 
         recorder.listen_in_background(source, record_callback, phrase_time_limit=None)
         self.loop.run()
