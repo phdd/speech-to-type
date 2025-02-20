@@ -14,7 +14,7 @@ import torch
 import subprocess
 
 model_name = "medium"
-energy_threshold = 100
+energy_threshold = 1000
 initial_prompt = """
 Beachte bei der Transkription folgende Eigennamen von Orten, Firmen und Personen:
 
@@ -38,9 +38,11 @@ class SpeechToText(Gtk.Application):
         self.loop = None  # Main loop reference
 
     def stop(self, notification, action, user_data=None):
+        print("stop")
         self.loop.quit()
 
     def do_activate(self):
+        print("do_activate")
         Notify.init('Speech to Text')
         self.loop = GLib.MainLoop() 
 
@@ -66,10 +68,12 @@ class SpeechToText(Gtk.Application):
             recorder.adjust_for_ambient_noise(source)
 
         def record_callback(_, audio: sr.AudioData):
+            print("record_callback")
             audio_np = np.frombuffer(audio.get_raw_data(), dtype=np.int16).astype(np.float32) / 32768.0
             result = model.transcribe(audio_np, fp16=torch.cuda.is_available(), initial_prompt=initial_prompt)
             text = result['text'].strip()
-            type_text(f"{text} ")
+            # type_text(f"{text} ")
+            print(f"Transkription: {text}")
 
         recorder.listen_in_background(source, record_callback, phrase_time_limit=None)
         self.loop.run()
