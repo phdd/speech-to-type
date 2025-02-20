@@ -14,7 +14,7 @@ import torch
 import subprocess
 
 model_name = "medium"
-energy_threshold = 1000
+energy_threshold = 100
 initial_prompt = """
 Beachte bei der Transkription folgende Eigennamen von Orten, Firmen und Personen:
 
@@ -22,6 +22,11 @@ Beachte bei der Transkription folgende Eigennamen von Orten, Firmen und Personen
 - VIPFluid
 - Cancilico
 - Dima
+- Stefan
+- Karsten
+- sit.institute
+- SageDocs
+- Fog
 """
 
 def type_text(text):
