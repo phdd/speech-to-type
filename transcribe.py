@@ -14,7 +14,7 @@ import torch
 import subprocess
 
 model_name = "medium"
-energy_threshold = 1000
+energy_threshold = 1600
 initial_prompt = """
 Beachte bei der Transkription folgende Eigennamen von Orten, Firmen und Personen:
 
@@ -24,9 +24,21 @@ Beachte bei der Transkription folgende Eigennamen von Orten, Firmen und Personen
 - Dima
 - Stefan
 - Karsten
+- Raphael
 - sit.institute
 - SageDocs
 - Fog
+- n8n
+- Grafana
+- Supabase
+- Manga-Wiki
+- Mautic
+- PostHog
+- LangGraph
+- CrewAI
+- RAG
+- SaxMS
+- Behdark
 """
 
 def type_text(text):
@@ -72,7 +84,9 @@ class SpeechToText(Gtk.Application):
             audio_np = np.frombuffer(audio.get_raw_data(), dtype=np.int16).astype(np.float32) / 32768.0
             result = model.transcribe(audio_np, fp16=torch.cuda.is_available(), initial_prompt=initial_prompt)
             text = result['text'].strip()
-            type_text(f"{text} ")
+
+            if len(text) > 15:
+                type_text(f"{text} ")
             # print(f"Transkription: {text}")
 
         recorder.listen_in_background(source, record_callback, phrase_time_limit=None)
