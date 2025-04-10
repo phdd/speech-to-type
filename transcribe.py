@@ -14,7 +14,7 @@ import torch
 import subprocess
 
 model_name = "medium"
-energy_threshold = 1200
+energy_threshold = 800
 initial_prompt = """
 Beachte bei der Transkription folgende Eigennamen von Orten, Firmen und Personen:
 
@@ -43,10 +43,15 @@ Beachte bei der Transkription folgende Eigennamen von Orten, Firmen und Personen
 - ChatGPT
 - Qonto
 - Herr Walther
+- SKONTI
+- Construct X
+- Figma
 """
 
 def type_text(text):
-    subprocess.run(["xdotool", "type", text])
+    # Remove control characters and non-spoken symbols
+    filtered_text = re.sub(r'[^\w\s.,!?-]', '', text) 
+    subprocess.run(["xdotool", "type", filtered_text.strip() + " "])
 
 class SpeechToText(Gtk.Application):
     def __init__(self):
