@@ -1,6 +1,7 @@
 import re
 import sys
 import gi
+from pynput import keyboard
 
 gi.require_version('Notify', '0.7')
 gi.require_version('Gtk', '4.0')
@@ -57,19 +58,48 @@ class SpeechToText(Gtk.Application):
     def __init__(self):
         super().__init__(application_id="com.github.phdd.SpeechToText")
         self.loop = None  # Main loop reference
+        self.recording = False  # State to track if recording is active
+        self.listener = None  # Keyboard listener reference
 
     def stop(self, notification, action, user_data=None):
         print("stop")
+        if self.listener:
+            self.listener.stop()  # Stop the keyboard listener
         self.loop.quit()
+
+    def start_recording(self):
+        if not self.recording:
+            self.recording = True
+            self.notification.update
+            print("Recording started")
+
+    def stop_recording(self):
+        if self.recording:
+            self.recording = False
+            print("Recording stopped")
+
+    def on_press(self, key):
+        try:
+            if key == keyboard.Key.ctrl:  # Check if the Ctrl key is pressed
+                self.start_recording()
+        except AttributeError:
+            pass
+
+    def on_release(self, key):
+        try:
+            if key == keyboard.Key.ctrl:
+                self.stop_recording()
+        except AttributeError:
+            pass
 
     def do_activate(self):
         print("do_activate")
         Notify.init('Speech to Text')
         self.loop = GLib.MainLoop() 
 
-        notification = Notify.Notification.new("Model laden", "Bitte warte einen Moment")
-        notification.set_urgency(Notify.Urgency.CRITICAL)
-        notification.show()
+        self.notification = Notify.Notification.new("Model laden", "Bitte warte einen Moment")
+        self.notification.set_urgency(Notify.Urgency.CRITICAL)
+        self.notification.show()
 
         recorder = sr.Recognizer()
         recorder.energy_threshold = energy_threshold
@@ -77,18 +107,21 @@ class SpeechToText(Gtk.Application):
 
         source = sr.Microphone(sample_rate=16000)
         model = whisper.load_model(model_name)
-        notification.close()
+        self.notification.close()
 
-        notification = Notify.Notification.new("Modell geladen", "Sprich!")
-        notification.set_urgency(Notify.Urgency.CRITICAL)
-        notification.set_timeout(Notify.EXPIRES_NEVER)
-        notification.add_action("stop", "Stop", self.stop)
-        notification.show()
+        self.notification = Notify.Notification.new("Modell geladen", "Halte <Strg> gedrückt, um aufzunehmen")
+        self.notification.set_urgency(Notify.Urgency.CRITICAL)
+        self.notification.set_timeout(Notify.EXPIRES_NEVER)
+        self.notification.add_action("stop", "Stop", self.stop)
+        self.notification.show()
 
         with source:
             recorder.adjust_for_ambient_noise(source)
 
         def record_callback(_, audio: sr.AudioData):
+            if not self.recording:
+                return
+
             print("record_callback")
             audio_np = np.frombuffer(audio.get_raw_data(), dtype=np.int16).astype(np.float32) / 32768.0
             result = model.transcribe(audio_np, fp16=torch.cuda.is_available(), initial_prompt=initial_prompt)
@@ -96,9 +129,13 @@ class SpeechToText(Gtk.Application):
 
             if len(text) > 10:
                 type_text(f"{text} ")
-            # print(f"Transkription: {text}")
 
         recorder.listen_in_background(source, record_callback, phrase_time_limit=None)
+
+        # Start the keyboard listener
+        self.listener = keyboard.Listener(on_press=self.on_press, on_release=self.on_release)
+        self.listener.start()
+
         self.loop.run()
 
 app = SpeechToText()
