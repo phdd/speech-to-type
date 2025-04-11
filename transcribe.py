@@ -52,7 +52,7 @@ Beachte bei der Transkription folgende Eigennamen von Orten, Firmen und Personen
 def type_text(text):
     # Remove control characters and non-spoken symbols
     filtered_text = re.sub(r'[^\w\s.,!?-]', '', text) 
-    subprocess.run(["xdotool", "type", filtered_text.strip() + " "])
+    subprocess.run(["xdotool", "type", "--clearmodifiers", filtered_text.strip() + " "])
 
 class SpeechToText(Gtk.Application):
     def __init__(self):
@@ -81,14 +81,14 @@ class SpeechToText(Gtk.Application):
 
     def on_press(self, key):
         try:
-            if key == keyboard.Key.shift:  # Check if the Shift key is pressed
+            if key == keyboard.Key.f2:  # Check if the F2 key is pressed
                 self.start_recording()
         except AttributeError:
             pass
 
     def on_release(self, key):
         try:
-            if key == keyboard.Key.shift:
+            if key == keyboard.Key.f2:
                 self.stop_recording()
         except AttributeError:
             pass
@@ -110,7 +110,7 @@ class SpeechToText(Gtk.Application):
         model = whisper.load_model(model_name)
         self.notification.close()
 
-        self.notification = Notify.Notification.new("Bereitschaft", "Halte 'Shift' gedrückt, dann hör ich zu.")
+        self.notification = Notify.Notification.new("Bereitschaft", "Halte 'F2' gedrückt, dann hör ich zu.")
         self.notification.set_urgency(Notify.Urgency.CRITICAL)
         self.notification.set_timeout(Notify.EXPIRES_NEVER)
         self.notification.add_action("stop", "Beenden", self.stop)
@@ -133,7 +133,7 @@ class SpeechToText(Gtk.Application):
             if len(text) > 10:
                 type_text(f"{text} ")
 
-            self.notification.update("Bereitschaft", "Halte 'Shift' gedrückt, dann hör ich zu.")
+            self.notification.update("Bereitschaft", "Halte 'F2' gedrückt, dann hör ich zu.")
             self.notification.show()
 
         recorder.listen_in_background(source, record_callback, phrase_time_limit=None)
