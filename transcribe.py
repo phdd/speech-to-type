@@ -81,14 +81,14 @@ class SpeechToText(Gtk.Application):
 
     def on_press(self, key):
         try:
-            if key == keyboard.Key.ctrl:  # Check if the Ctrl key is pressed
+            if key == keyboard.Key.shift:  # Check if the Shift key is pressed
                 self.start_recording()
         except AttributeError:
             pass
 
     def on_release(self, key):
         try:
-            if key == keyboard.Key.ctrl:
+            if key == keyboard.Key.shift:
                 self.stop_recording()
         except AttributeError:
             pass
@@ -110,7 +110,7 @@ class SpeechToText(Gtk.Application):
         model = whisper.load_model(model_name)
         self.notification.close()
 
-        self.notification = Notify.Notification.new("Bereitschaft", "Halte 'Strg' gedrückt, dann hör ich zu.")
+        self.notification = Notify.Notification.new("Bereitschaft", "Halte 'Shift' gedrückt, dann hör ich zu.")
         self.notification.set_urgency(Notify.Urgency.CRITICAL)
         self.notification.set_timeout(Notify.EXPIRES_NEVER)
         self.notification.add_action("stop", "Beenden", self.stop)
@@ -133,7 +133,7 @@ class SpeechToText(Gtk.Application):
             if len(text) > 10:
                 type_text(f"{text} ")
 
-            self.notification.update("Bereitschaft", "Halte 'Strg' gedrückt, dann hör ich zu.")
+            self.notification.update("Bereitschaft", "Halte 'Shift' gedrückt, dann hör ich zu.")
             self.notification.show()
 
         recorder.listen_in_background(source, record_callback, phrase_time_limit=None)
