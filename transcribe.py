@@ -70,13 +70,14 @@ class SpeechToText(Gtk.Application):
     def start_recording(self):
         if not self.recording:
             self.recording = True
-            self.notification.update
-            print("Recording started")
+            self.notification.update("Aufnahme", "gestartet")
+            self.notification.show()
 
     def stop_recording(self):
         if self.recording:
             self.recording = False
-            print("Recording stopped")
+            self.notification.update("Aufnahme", "beendet")
+            self.notification.show()
 
     def on_press(self, key):
         try:
@@ -97,7 +98,7 @@ class SpeechToText(Gtk.Application):
         Notify.init('Speech to Text')
         self.loop = GLib.MainLoop() 
 
-        self.notification = Notify.Notification.new("Model laden", "Bitte warte einen Moment")
+        self.notification = Notify.Notification.new("Initialisierung", "Bitte warte einen Moment")
         self.notification.set_urgency(Notify.Urgency.CRITICAL)
         self.notification.show()
 
@@ -109,10 +110,10 @@ class SpeechToText(Gtk.Application):
         model = whisper.load_model(model_name)
         self.notification.close()
 
-        self.notification = Notify.Notification.new("Modell geladen", "Halte <Strg> gedrückt, um aufzunehmen")
+        self.notification = Notify.Notification.new("Bereitschaft", "Halte 'Strg' gedrückt, dann hör ich zu.")
         self.notification.set_urgency(Notify.Urgency.CRITICAL)
         self.notification.set_timeout(Notify.EXPIRES_NEVER)
-        self.notification.add_action("stop", "Stop", self.stop)
+        self.notification.add_action("stop", "Beenden", self.stop)
         self.notification.show()
 
         with source:
@@ -122,13 +123,18 @@ class SpeechToText(Gtk.Application):
             if not self.recording:
                 return
 
-            print("record_callback")
+            self.notification.update("Aufnahme", "verarbeiten")
+            self.notification.show()
+
             audio_np = np.frombuffer(audio.get_raw_data(), dtype=np.int16).astype(np.float32) / 32768.0
             result = model.transcribe(audio_np, fp16=torch.cuda.is_available(), initial_prompt=initial_prompt)
             text = result['text'].strip()
 
             if len(text) > 10:
                 type_text(f"{text} ")
+
+            self.notification.update("Bereitschaft", "Halte 'Strg' gedrückt, dann hör ich zu.")
+            self.notification.show()
 
         recorder.listen_in_background(source, record_callback, phrase_time_limit=None)
 
