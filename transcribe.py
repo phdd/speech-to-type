@@ -47,12 +47,20 @@ Beachte bei der Transkription folgende Eigennamen von Orten, Firmen und Personen
 - SKONTI
 - Construct X
 - Figma
+- Ullersdorf
+- Löbtau
+- Vaadin
 """
 
 def type_text(text):
     # Remove control characters and non-spoken symbols
     filtered_text = re.sub(r'[^\w\s.,!?-]', '', text) 
-    subprocess.run(["xdotool", "type", "--clearmodifiers", filtered_text.strip() + " "])
+    result = subprocess.run(
+        ["xdotool", "type", "--clearmodifiers", filtered_text.strip() + " "],
+        capture_output=True,
+        text=True
+    )
+    print(result.stdout)
 
 class SpeechToText(Gtk.Application):
     def __init__(self):
@@ -107,7 +115,13 @@ class SpeechToText(Gtk.Application):
         recorder.dynamic_energy_threshold = False
 
         source = sr.Microphone(sample_rate=16000)
-        model = whisper.load_model(model_name)
+        try:
+            model = whisper.load_model(model_name)
+        except Exception as e:
+            self.notification.update("Fehler", f"Modell konnte nicht geladen werden: {e}")
+            self.notification.show()
+            print(f"Fehler beim Laden des Modells: {e}")
+            sys.exit(1)
         self.notification.close()
 
         self.notification = Notify.Notification.new("Bereitschaft", "Halte 'F2' gedrückt, dann hör ich zu.")
