@@ -14,7 +14,7 @@ import torch
 import subprocess
 
 model_name = "medium"
-energy_threshold = 800
+energy_threshold = 200
 initial_prompt = """
 Beachte bei der Transkription folgende Eigennamen von Orten, Firmen und Personen:
 
@@ -26,6 +26,7 @@ Beachte bei der Transkription folgende Eigennamen von Orten, Firmen und Personen
 - Karsten
 - Raphael
 - sit.institute
+- siti
 - SageDocs
 - Fog
 - n8n
@@ -34,6 +35,7 @@ Beachte bei der Transkription folgende Eigennamen von Orten, Firmen und Personen
 - Manga-Wiki
 - Mautic
 - PostHog
+- LangChain
 - LangGraph
 - CrewAI
 - RAG
@@ -43,17 +45,34 @@ Beachte bei der Transkription folgende Eigennamen von Orten, Firmen und Personen
 - ChatGPT
 - Qonto
 - Herr Walther
+- Heisig
 - SKONTI
 - Construct X
 - Figma
 - Ullersdorf
 - Löbtau
 - Vaadin
+- Flowise
+- Nuxt
+- OpenAPI
+- Huey
+- FastAPI
+- Bearer
+- Ullersdorf
+- Hoyerswerda
+- Highsick
+- Langfuse
+- Ollama
+- Jirka
+- Onctopus
+- Sybille
 """
 
 def type_text(text):
     # Remove control characters and non-spoken symbols
     filtered_text = re.sub(r'[^\w\s.,!?-]', '', text) 
+    filtered_text = filtered_text.replace("Demokraten- ", "")
+    subprocess.run(["setxkbmap", "de"])
     subprocess.run(["xdotool", "type", "--clearmodifiers", filtered_text.strip() + " "])
 
 class SpeechToText(Gtk.Application):
@@ -89,8 +108,6 @@ class SpeechToText(Gtk.Application):
         self.notification.close()
 
         self.notification = Notify.Notification.new("Bereitschaft", "Ich höre zu")
-        self.notification.set_urgency(Notify.Urgency.CRITICAL)
-        self.notification.set_timeout(Notify.EXPIRES_NEVER)
         self.notification.add_action("stop", "Beenden", self.stop)
         self.notification.show()
 
