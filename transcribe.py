@@ -92,7 +92,16 @@ def type_text(text, notification=None):
     filtered_text = filtered_text.replace("Demokraten- ", "")
 
     subprocess.run(["setxkbmap", "de"])
-    subprocess.run(["xdotool", "type", "--clearmodifiers", filtered_text.strip() + " "])
+    subprocess.run(
+        [
+            "xdotool",
+            "type",
+            "--clearmodifiers",
+            "--delay",
+            "0",
+            filtered_text.strip() + " ",
+        ]
+    )
 
 
 class SpeechToText(Gtk.Application):
