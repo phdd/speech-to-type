@@ -4,6 +4,7 @@ import gi
 import torch
 import ctypes
 import ctypes.util
+import threading
 
 gi.require_version("Notify", "0.7")
 gi.require_version("Gtk", "4.0")
@@ -155,7 +156,12 @@ class SpeechToText(Gtk.Application):
         with source:
             recorder.adjust_for_ambient_noise(source)
 
+        processing = threading.Event()
+
         def record_callback(_, audio: sr.AudioData):
+            if processing.is_set():
+                return
+
             audio_np = (
                 np.frombuffer(audio.get_raw_data(), dtype=np.int16).astype(np.float32)
                 / 32768.0
@@ -175,24 +181,29 @@ class SpeechToText(Gtk.Application):
                     print("VAD: kein Sprache erkannt, verwerfe Chunk")
                 return
 
-            self.notification.update("Aufnahme", "verarbeiten")
-            self.notification.show()
+            processing.set()
+            try:
+                self.notification.update("Aufnahme", "verarbeiten")
+                self.notification.show()
 
-            result = model.transcribe(
-                audio_np, fp16=torch.cuda.is_available(), initial_prompt=initial_prompt
-            )
-            text = result["text"]
-            if isinstance(text, list):
-                text = " ".join(str(t) for t in text)
-            text = str(text).strip()
+                result = model.transcribe(
+                    audio_np,
+                    fp16=torch.cuda.is_available(),
+                    initial_prompt=initial_prompt,
+                )
+                text = result["text"]
+                if isinstance(text, list):
+                    text = " ".join(str(t) for t in text)
+                text = str(text).strip()
 
-            if len(text) > 10:
-                type_text(f"{text} ", notification=self.notification)
+                if len(text) > 10:
+                    type_text(f"{text} ", notification=self.notification)
+            finally:
+                processing.clear()
+                self.notification.update("Bereitschaft", "Ich höre zu")
+                self.notification.show()
 
-            self.notification.update("Bereitschaft", "Ich höre zu")
-            self.notification.show()
-
-        recorder.listen_in_background(source, record_callback, phrase_time_limit=None)
+        recorder.listen_in_background(source, record_callback, phrase_time_limit=10)
 
         self.loop.run()
 
