@@ -91,7 +91,7 @@ def type_text(text, notification=None):
     filtered_text = re.sub(r"[^\w\s.,!?-]", "", text)
     filtered_text = filtered_text.replace("Demokraten- ", "")
 
-    subprocess.run(["setxkbmap", "de"])
+    subprocess.run(["setxkbmap", "de"], stderr=subprocess.DEVNULL)
     subprocess.run(
         [
             "xdotool",
