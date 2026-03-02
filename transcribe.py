@@ -1,9 +1,12 @@
 import re
 import sys
 import gi
+import time
+import ctypes
+import ctypes.util
 
-gi.require_version('Notify', '0.7')
-gi.require_version('Gtk', '4.0')
+gi.require_version("Notify", "0.7")
+gi.require_version("Gtk", "4.0")
 
 from gi.repository import Notify, Gtk, GLib
 
@@ -13,8 +16,13 @@ import whisper
 import torch
 import subprocess
 
+# Konfiguration
 model_name = "medium"
-energy_threshold = 200
+energy_threshold = (
+    50  # Niedrig = weniger Abbrüche, mehr Hintergrundgeräusche (war: 200)
+)
+DEBUG = False  # Debug-Ausgaben aktivieren/deaktivieren
+
 initial_prompt = """
 Beachte bei der Transkription folgende Eigennamen von Orten, Firmen und Personen:
 
@@ -66,14 +74,21 @@ Beachte bei der Transkription folgende Eigennamen von Orten, Firmen und Personen
 - Jirka
 - Onctopus
 - Sybille
+- Miro
+- Miro-Board (oft als MyRobot verstanden)
 """
 
-def type_text(text):
+def type_text(text, notification=None):
+    """
+    Tippt Text via xdotool ein.
+    """
     # Remove control characters and non-spoken symbols
-    filtered_text = re.sub(r'[^\w\s.,!?-]', '', text) 
+    filtered_text = re.sub(r"[^\w\s.,!?-]", "", text)
     filtered_text = filtered_text.replace("Demokraten- ", "")
+
     subprocess.run(["setxkbmap", "de"])
     subprocess.run(["xdotool", "type", "--clearmodifiers", filtered_text.strip() + " "])
+
 
 class SpeechToText(Gtk.Application):
     def __init__(self):
@@ -86,10 +101,12 @@ class SpeechToText(Gtk.Application):
 
     def do_activate(self):
         print("do_activate")
-        Notify.init('Speech to Text')
-        self.loop = GLib.MainLoop() 
+        Notify.init("Speech to Text")
+        self.loop = GLib.MainLoop()
 
-        self.notification = Notify.Notification.new("Initialisierung", "Bitte warte einen Moment")
+        self.notification = Notify.Notification.new(
+            "Initialisierung", "Bitte warte einen Moment"
+        )
         self.notification.set_urgency(Notify.Urgency.CRITICAL)
         self.notification.show()
 
@@ -101,7 +118,9 @@ class SpeechToText(Gtk.Application):
         try:
             model = whisper.load_model(model_name)
         except Exception as e:
-            self.notification.update("Fehler", f"Modell konnte nicht geladen werden: {e}")
+            self.notification.update(
+                "Fehler", f"Modell konnte nicht geladen werden: {e}"
+            )
             self.notification.show()
             print(f"Fehler beim Laden des Modells: {e}")
             sys.exit(1)
@@ -118,15 +137,20 @@ class SpeechToText(Gtk.Application):
             self.notification.update("Aufnahme", "verarbeiten")
             self.notification.show()
 
-            audio_np = np.frombuffer(audio.get_raw_data(), dtype=np.int16).astype(np.float32) / 32768.0
-            result = model.transcribe(audio_np, fp16=torch.cuda.is_available(), initial_prompt=initial_prompt)
-            text = result['text']
+            audio_np = (
+                np.frombuffer(audio.get_raw_data(), dtype=np.int16).astype(np.float32)
+                / 32768.0
+            )
+            result = model.transcribe(
+                audio_np, fp16=torch.cuda.is_available(), initial_prompt=initial_prompt
+            )
+            text = result["text"]
             if isinstance(text, list):
-                text = ' '.join(str(t) for t in text)
+                text = " ".join(str(t) for t in text)
             text = str(text).strip()
 
             if len(text) > 10:
-                type_text(f"{text} ")
+                type_text(f"{text} ", notification=self.notification)
 
             self.notification.update("Bereitschaft", "Ich höre zu")
             self.notification.show()
@@ -134,6 +158,7 @@ class SpeechToText(Gtk.Application):
         recorder.listen_in_background(source, record_callback, phrase_time_limit=None)
 
         self.loop.run()
+
 
 app = SpeechToText()
 app.run(sys.argv)
