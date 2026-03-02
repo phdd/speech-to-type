@@ -23,7 +23,7 @@ model_name = "medium"
 DEBUG = False  # Debug-Ausgaben aktivieren/deaktivieren
 
 # VAD-Konfiguration
-VAD_THRESHOLD = 0.8  # Sprachwahrscheinlichkeit 0.0-1.0 (höher = strenger)
+VAD_THRESHOLD = 0.5  # Sprachwahrscheinlichkeit 0.0-1.0 (höher = strenger)
 VAD_MIN_SILENCE_MS = 300  # Mindest-Stille nach Sprache in Millisekunden
 VAD_CHUNK_SIZE = 512  # Pflicht für 16kHz (Silero VAD erwartet exakt 512 Samples)
 
@@ -85,13 +85,23 @@ Beachte bei der Transkription folgende Eigennamen von Orten, Firmen und Personen
 
 def type_text(text, notification=None):
     """
-    Tippt Text via wtype ein.
+    Tippt Text via xdotool ein.
     """
     # Remove control characters and non-spoken symbols
     filtered_text = re.sub(r"[^\w\s.,!?-]", "", text)
     filtered_text = filtered_text.replace("Demokraten- ", "")
 
-    subprocess.run(["wtype", filtered_text.strip() + " "])
+    subprocess.run(["setxkbmap", "de"])
+    subprocess.run(
+        [
+            "xdotool",
+            "type",
+            "--clearmodifiers",
+            "--delay",
+            "0",
+            filtered_text.strip() + " ",
+        ]
+    )
 
 
 class SpeechToText(Gtk.Application):
