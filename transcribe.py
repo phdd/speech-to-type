@@ -1,4 +1,3 @@
-import re
 import sys
 import gi
 import torch
@@ -14,9 +13,9 @@ from gi.repository import Notify, Gtk, GLib
 import numpy as np
 import speech_recognition as sr
 import whisper
-import subprocess
 
 from silero_vad import load_silero_vad, VADIterator
+from keyboard import type_text
 
 # Konfiguration
 model_name = "medium"
@@ -81,27 +80,6 @@ Beachte bei der Transkription folgende Eigennamen von Orten, Firmen und Personen
 - Miro
 - Miro-Board (oft als MyRobot verstanden)
 """
-
-
-def type_text(text, notification=None):
-    """
-    Tippt Text via xdotool ein.
-    """
-    # Remove control characters and non-spoken symbols
-    filtered_text = re.sub(r"[^\w\s.,!?-]", "", text)
-    filtered_text = filtered_text.replace("Demokraten- ", "")
-
-    subprocess.run(["setxkbmap", "de"], stderr=subprocess.DEVNULL)
-    subprocess.run(
-        [
-            "xdotool",
-            "type",
-            "--clearmodifiers",
-            "--delay",
-            "0",
-            filtered_text.strip() + " ",
-        ]
-    )
 
 
 class SpeechToText(Gtk.Application):
@@ -206,7 +184,7 @@ class SpeechToText(Gtk.Application):
                 text = str(text).strip()
 
                 if len(text) > 10:
-                    type_text(f"{text} ", notification=self.notification)
+                    type_text(text.strip() + " ")
             finally:
                 processing.clear()
                 self.notification.update("Bereitschaft", "Ich höre zu")
